@@ -11,3 +11,18 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+.rowh {
+  font-size: 120%;
+}
+.row0 {
+  background-color: #ddd;
+}
+.row1 {
+  background-color: white;
+}
+.up {
+  color: red;
+}
+.down {
+  color: green;
+}
