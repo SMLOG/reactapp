@@ -34,32 +34,63 @@ import "./App.css";
   ["30", "日期；", "date"],
   ["31", "时间；", "time"]
 ];*/
-let thead = (            <tr className="rowh">
-<th>代码</th>
-<th>名</th>
-<th>价</th>
-<th>买一</th>
-<th>卖一</th>
-<th>开</th>
-<th>昨</th>
-<th>高</th>
-<th>低</th>
-<th>额(亿)</th>
-<th>量(万)</th>
-</tr>);
-function covert(data) {
-
-  if(data.code==='hkHSI'){
+let thead = (
+  <tr className="rowh">
+    <th>代码</th>
+    <th>名</th>
+    <th>价</th>
+    <th>开</th>
+    <th>昨</th>
+    <th>高</th>
+    <th>低</th>
+    <th>额(亿)</th>
+    <th>量(万)</th>
+  </tr>
+);
+function covert(data, code) {
+  console.log(data);
+  if (data[0] === "HSI") {
     return {
-      name: data[1],
-      open:data[2],
-      closed:data[3],
-      hight:data[4],
-      low:data[5],
+      name: data[0],
+      open: data[2],
+      closed: data[3],
+      highPrice: data[4],
+      lowPrice: data[5],
       price: data[6],
       percent: data[8]
-  
+    };
   }
+  //美股
+  if (data[3].indexOf(":") > 0) {
+    return {
+      name: data[0],
+      price: data[1],
+      percent: data[2],
+      datetime: data[3],
+      diff: data[4], //涨跌
+      open: data[5],
+      highPrice: data[6],
+      lowPrice: data[7],
+      high52: data[8], //52周最高
+      low52: data[8], //52周最低
+      volTotal: data[10], //成交量
+      total: data[11], //10日均量
+      closed: data[26]
+    };
+  }
+  if (data[4].indexOf(":") > 0) {
+    return {
+      name: data[0],
+      price: data[1],
+      percent: data[3]
+    };
+  }
+  if (data[7].indexOf(":") > 0) {
+    return {
+      name: data[0],
+      price: data[1],
+      percent: data[3]
+    };
   }
   return {
     name: data[0],
@@ -127,39 +158,35 @@ vars["time"] = vars["time"] || "1000";
 const codes = vars["codes"].split(",");
 let stlist = {};
 function notifyMe(title, msg) {
-
   // Let's check if the user is okay to get some notification
-  console.log(title, msg)
-  if(Notification.permission !=='granted')Notification.requestPermission();
+  console.log(title, msg);
+  if (Notification.permission !== "granted") Notification.requestPermission();
 
   if (Notification.permission === "granted") {
-      // If it's okay let's create a notification
-      var notification = new Notification(title, { body: msg });
-      notification.onclick = notification.close.bind(notification);
-      setTimeout(notification.close.bind(notification), 8000);
+    // If it's okay let's create a notification
+    var notification = new Notification(title, { body: msg });
+    notification.onclick = notification.close.bind(notification);
+    setTimeout(notification.close.bind(notification), 8000);
   }
 
-
-
-  // At last, if the user already denied any notification, and you 
+  // At last, if the user already denied any notification, and you
   // want to be respectful there is no need to bother him any more.
 }
 
-window.addEventListener('load', function () {
-  Notification.requestPermission(function (status) {
-      // This allows to use Notification.permission with Chrome/Safari
-      if (Notification.permission !== status) {
-          Notification.permission = status;
-      }
+window.addEventListener("load", function() {
+  Notification.requestPermission(function(status) {
+    // This allows to use Notification.permission with Chrome/Safari
+    if (Notification.permission !== status) {
+      Notification.permission = status;
+    }
   });
 });
 
-
-   function compareValueToColor(target,base){
-	   if(target>base)return 'up';
-	   if(target<base)return 'down';
-	   return '';
-   }
+function compareValueToColor(target, base) {
+  if (target > base) return "up";
+  if (target < base) return "down";
+  return "";
+}
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -169,9 +196,13 @@ class App extends React.Component {
     let d = new Date();
     if (d.getDay() === 6 || d.getDay() === 0) return false;
     if (d.getHours() < 9 || d.getHours() > 16) return false;
-    if (((d.getHours() === 11 && d.getMinutes() > 30) || d.getHours() > 11) && d.getHours() < 13) return false;
+    if (
+      ((d.getHours() === 11 && d.getMinutes() > 30) || d.getHours() > 11) &&
+      d.getHours() < 13
+    )
+      return false;
     return true;
-}
+  }
   refresh() {
     console.log(new Date());
     let titles = [];
@@ -181,49 +212,71 @@ class App extends React.Component {
       loadScripts(scripts).then(() => {
         let items = codes
           .map(code => {
-            let data = covert(window["hq_str_" + code].split(","));
+            let data = covert(window["hq_str_" + code].split(","), code);
             data.code = code;
             return data;
           })
           .map(data => {
-            let percent = toFixed( ((data.price - data.closed) / data.closed) * 100, 2);
+            let percent = toFixed(
+              ((data.price - data.closed) / data.closed) * 100,
+              2
+            );
             data.percent = percent;
-            data.openColor = compareValueToColor(data.open,data.closed);
-            data.highColor= compareValueToColor(data.highPrice,data.closed);
-            data.lowColor= compareValueToColor(data.lowPrice,data.closed);
-            data.buy1Color= compareValueToColor(data.buy1Price,data.closed);
-            data.sell1Color= compareValueToColor(data.sell1Price,data.closed);
-            data.priceColor= compareValueToColor(data.price,data.closed);
+            data.openColor = compareValueToColor(data.open, data.closed);
+            data.highColor = compareValueToColor(data.highPrice, data.closed);
+            data.lowColor = compareValueToColor(data.lowPrice, data.closed);
+            data.buy1Color = compareValueToColor(data.buy1Price, data.closed);
+            data.sell1Color = compareValueToColor(data.sell1Price, data.closed);
+            data.priceColor = compareValueToColor(data.price, data.closed);
 
-            titles.push(`${percent}% ${toFixed(data.price,2)}(${toFixed(data.price - data.closed,2)})${data.name}`);
+            titles.push(
+              `${percent}% ${toFixed(data.price, 2)}(${toFixed(
+                data.price - data.closed,
+                2
+              )})${data.name}`
+            );
 
-            let msgs =[];
+            let msgs = [];
 
-            stlist[data.code] = stlist[data.code] || { percentThreshold: 0, lastTotal: 0,tt:new Array(15).fill(0) };
+            stlist[data.code] = stlist[data.code] || {
+              percentThreshold: 0,
+              lastTotal: 0,
+              tt: new Array(15).fill(0)
+            };
             let st = stlist[data.code];
 
-                        // percentThreshold 
-                        if (data[3]>0&&Math.abs(percent - st.percentThreshold) > 0.5) {
-                          console.log(st.percentThreshold)
-                          st.percentThreshold = percent / Math.abs(percent) * Math.floor(Math.abs(percent) / 0.5) * 0.5;
-                          msgs.push(`${data[0]}:\n${data[3]} ${percent}%  ${((percent - st.percentThreshold) > 0 ? "↑" : "↓")}`);
-                      }
+            // percentThreshold
+            if (data[3] > 0 && Math.abs(percent - st.percentThreshold) > 0.5) {
+              console.log(st.percentThreshold);
+              st.percentThreshold =
+                (percent / Math.abs(percent)) *
+                Math.floor(Math.abs(percent) / 0.5) *
+                0.5;
+              msgs.push(
+                `${data[0]}:\n${data[3]} ${percent}%  ${
+                  percent - st.percentThreshold > 0 ? "↑" : "↓"
+                }`
+              );
+            }
 
-
-                      let tt = st.tt;
-                      let prevTotal = tt.reduce((a, b) => a + b, 0);
-                      let last = tt.shift();
-                      tt.push(data[8]);
-                      let curTotal = tt.reduce((a, b) => a + b, 0) - last*tt.length;
-                      prevTotal = - last*tt.length;
-                      if(last>0&&curTotal / prevTotal>3){
-                          msgs.push(`${data[0]}:\nVol ${Math.floor(curTotal/100)}/${Math.floor(prevTotal/100)} > ${Math.floor(curTotal / prevTotal)}`);
-                      }
-                      msgs.map(text=>{
-                        console.log(text)
-                        notifyMe(data.time,text );
-                        return '';
-                    })
+            let tt = st.tt;
+            let prevTotal = tt.reduce((a, b) => a + b, 0);
+            let last = tt.shift();
+            tt.push(data[8]);
+            let curTotal = tt.reduce((a, b) => a + b, 0) - last * tt.length;
+            prevTotal = -last * tt.length;
+            if (last > 0 && curTotal / prevTotal > 3) {
+              msgs.push(
+                `${data[0]}:\nVol ${Math.floor(curTotal / 100)}/${Math.floor(
+                  prevTotal / 100
+                )} > ${Math.floor(curTotal / prevTotal)}`
+              );
+            }
+            msgs.map(text => {
+              console.log(text);
+              notifyMe(data.time, text);
+              return "";
+            });
 
             return data;
           });
@@ -232,7 +285,7 @@ class App extends React.Component {
           .map(d => `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`)
           .join("");
         this.setState({ items: items, timeStr });
-        document.title = titles.join(',');
+        document.title = titles.join(",");
       });
       this.refresh();
     }, vars["time"]);
@@ -251,7 +304,8 @@ class App extends React.Component {
       <div>
         <div>{this.state.timeStr}</div>
         <table>
-          <tbody>{thead}
+          <tbody>
+            {thead}
             {this.state.items.map((item, i) => (
               <Item key={item.code} item={item} className={"row" + (i % 2)} />
             ))}
@@ -271,13 +325,9 @@ function Item(props) {
       <td>{item.code}</td>
       <td>{item.name}</td>
       <td className={item.priceColor}>
-	{toFixed(item.price, 2)}<span> {item.percent}%</span><span>({toFixed(item.price - item.closed, 2)})</span>
-      </td>
-      <td className={item.buy1Color}>
-        {toFixed(item.buy1Price, 2)}({toFixed(item.buy1Vol / 100, 0)})
-      </td>
-      <td className={item.sell1Color}>
-        {toFixed(item.sell1Price, 2)}({toFixed(item.sell1Vol / 100, 0)})
+        {toFixed(item.price, 2)}
+        <span> {item.percent}%</span>
+        <span>({toFixed(item.price - item.closed, 2)})</span>
       </td>
       <td className={item.openColor}>{toFixed(item.open, 2)}</td>
       <td>{toFixed(item.closed, 2)}</td>
