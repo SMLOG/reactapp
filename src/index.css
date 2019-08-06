@@ -15,7 +15,7 @@ code {
   font-size: 120%;
 }
 .row0 {
-  background-color: #ddd;
+  background-color: #eee;
 }
 .row1 {
   background-color: white;
@@ -25,4 +25,5 @@ code {
 }
 .down {
   color: green;
+  transition: background-color 500ms linear;
 }

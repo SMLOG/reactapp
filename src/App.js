@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.css";
-const nameMap: string[][] = [
+/*const nameMap: string[][] = [
   ["0", "股票名字；", "name"],
   ["1", "今日开盘价", "open"],
   ["2", "昨日收盘价；", "closed"],
@@ -33,8 +33,34 @@ const nameMap: string[][] = [
   ["29", "卖五报价", "sell5Price"],
   ["30", "日期；", "date"],
   ["31", "时间；", "time"]
-];
+];*/
+let thead = (            <tr className="rowh">
+<th>代码</th>
+<th>名</th>
+<th>价</th>
+<th>买一</th>
+<th>卖一</th>
+<th>开</th>
+<th>昨</th>
+<th>高</th>
+<th>低</th>
+<th>额(亿)</th>
+<th>量(万)</th>
+</tr>);
 function covert(data) {
+
+  if(data.code==='hkHSI'){
+    return {
+      name: data[1],
+      open:data[2],
+      closed:data[3],
+      hight:data[4],
+      low:data[5],
+      price: data[6],
+      percent: data[8]
+  
+  }
+  }
   return {
     name: data[0],
     open: data[1],
@@ -99,12 +125,57 @@ vars["codes"] = vars["codes"] || "sh000001";
 vars["time"] = vars["time"] || "1000";
 
 const codes = vars["codes"].split(",");
+let stlist = {};
+function notifyMe(title, msg) {
+
+  // Let's check if the user is okay to get some notification
+  console.log(title, msg)
+  if(Notification.permission !=='granted')Notification.requestPermission();
+
+  if (Notification.permission === "granted") {
+      // If it's okay let's create a notification
+      var notification = new Notification(title, { body: msg });
+      notification.onclick = notification.close.bind(notification);
+      setTimeout(notification.close.bind(notification), 8000);
+  }
+
+
+
+  // At last, if the user already denied any notification, and you 
+  // want to be respectful there is no need to bother him any more.
+}
+
+window.addEventListener('load', function () {
+  Notification.requestPermission(function (status) {
+      // This allows to use Notification.permission with Chrome/Safari
+      if (Notification.permission !== status) {
+          Notification.permission = status;
+      }
+  });
+});
+
+
+   function compareValueToColor(target,base){
+	   if(target>base)return 'up';
+	   if(target<base)return 'down';
+	   return '';
+   }
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = { items: new Array(0), timeStr: "00:00:00" };
   }
+  isTradeTime() {
+    let d = new Date();
+    if (d.getDay() === 6 || d.getDay() === 0) return false;
+    if (d.getHours() < 9 || d.getHours() > 16) return false;
+    if (((d.getHours() === 11 && d.getMinutes() > 30) || d.getHours() > 11) && d.getHours() < 13) return false;
+    return true;
+}
   refresh() {
+    console.log(new Date());
+    let titles = [];
+
     setTimeout(() => {
       var scripts = ["http://hq.sinajs.cn/list=" + vars["codes"]];
       loadScripts(scripts).then(() => {
@@ -115,23 +186,44 @@ class App extends React.Component {
             return data;
           })
           .map(data => {
-            let percent = toFixed(
-              ((data.price - data.closed) / data.closed) * 100,
-              2
-            );
+            let percent = toFixed( ((data.price - data.closed) / data.closed) * 100, 2);
             data.percent = percent;
-            if (percent > 0) {
-              data.priceArrow = "↑";
-              data.priceColor = "up";
-            } else {
-              if (percent < 0) {
-                data.priceArrow = "↓";
-                data.priceColor = "down";
-              }
-            }
+            data.openColor = compareValueToColor(data.open,data.closed);
+            data.highColor= compareValueToColor(data.highPrice,data.closed);
+            data.lowColor= compareValueToColor(data.lowPrice,data.closed);
+            data.buy1Color= compareValueToColor(data.buy1Price,data.closed);
+            data.sell1Color= compareValueToColor(data.sell1Price,data.closed);
+            data.priceColor= compareValueToColor(data.price,data.closed);
 
-            if (data.open > data.closed) data.openColor = "up";
-            else if (data.open < data.closed) data.openColor = "down";
+            titles.push(`${percent}% ${toFixed(data.price,2)}(${toFixed(data.price - data.closed,2)})${data.name}`);
+
+            let msgs =[];
+
+            stlist[data.code] = stlist[data.code] || { percentThreshold: 0, lastTotal: 0,tt:new Array(15).fill(0) };
+            let st = stlist[data.code];
+
+                        // percentThreshold 
+                        if (data[3]>0&&Math.abs(percent - st.percentThreshold) > 0.5) {
+                          console.log(st.percentThreshold)
+                          st.percentThreshold = percent / Math.abs(percent) * Math.floor(Math.abs(percent) / 0.5) * 0.5;
+                          msgs.push(`${data[0]}:\n${data[3]} ${percent}%  ${((percent - st.percentThreshold) > 0 ? "↑" : "↓")}`);
+                      }
+
+
+                      let tt = st.tt;
+                      let prevTotal = tt.reduce((a, b) => a + b, 0);
+                      let last = tt.shift();
+                      tt.push(data[8]);
+                      let curTotal = tt.reduce((a, b) => a + b, 0) - last*tt.length;
+                      prevTotal = - last*tt.length;
+                      if(last>0&&curTotal / prevTotal>3){
+                          msgs.push(`${data[0]}:\nVol ${Math.floor(curTotal/100)}/${Math.floor(prevTotal/100)} > ${Math.floor(curTotal / prevTotal)}`);
+                      }
+                      msgs.map(text=>{
+                        console.log(text)
+                        notifyMe(data.time,text );
+                        return '';
+                    })
 
             return data;
           });
@@ -140,6 +232,7 @@ class App extends React.Component {
           .map(d => `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`)
           .join("");
         this.setState({ items: items, timeStr });
+        document.title = titles.join(',');
       });
       this.refresh();
     }, vars["time"]);
@@ -158,23 +251,9 @@ class App extends React.Component {
       <div>
         <div>{this.state.timeStr}</div>
         <table>
-          <tbody>
-            <tr className="rowh">
-              <th>代码</th>
-              <th>名称</th>
-              <th>现价</th>
-              <th>买一(手)</th>
-              <th>卖一(手)</th>
-              <th>涨幅</th>
-              <th>今开</th>
-              <th>昨收</th>
-              <th>最高</th>
-              <th>最低</th>
-              <th>成交额(亿)</th>
-              <th>成交量(万)</th>
-            </tr>
+          <tbody>{thead}
             {this.state.items.map((item, i) => (
-              <Item key={item[0]} item={item} className={"row" + (i % 2)} />
+              <Item key={item.code} item={item} className={"row" + (i % 2)} />
             ))}
           </tbody>
         </table>
@@ -191,21 +270,19 @@ function Item(props) {
     <tr className={props.className}>
       <td>{item.code}</td>
       <td>{item.name}</td>
-      <td className={item.priceColor}>{toFixed(item.price, 2)}</td>
       <td className={item.priceColor}>
+	{toFixed(item.price, 2)}<span> {item.percent}%</span><span>({toFixed(item.price - item.closed, 2)})</span>
+      </td>
+      <td className={item.buy1Color}>
         {toFixed(item.buy1Price, 2)}({toFixed(item.buy1Vol / 100, 0)})
       </td>
-      <td className={item.priceColor}>
+      <td className={item.sell1Color}>
         {toFixed(item.sell1Price, 2)}({toFixed(item.sell1Vol / 100, 0)})
-      </td>
-      <td className={item.priceColor}>
-        <span>{item.percent}%</span>
-        <span>（{toFixed(item.price - item.closed, 2)}）</span>
       </td>
       <td className={item.openColor}>{toFixed(item.open, 2)}</td>
       <td>{toFixed(item.closed, 2)}</td>
-      <td>{toFixed(item.highPrice, 2)}</td>
-      <td>{toFixed(item.lowPrice, 2)}</td>
+      <td className={item.highColor}>{toFixed(item.highPrice, 2)}</td>
+      <td className={item.lowColor}>{toFixed(item.lowPrice, 2)}</td>
 
       <td>{toFixed(item.total / 100000000, 3)}</td>
       <td>{toFixed(item.volTotal / 1000000, 3)}</td>
