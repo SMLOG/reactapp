@@ -244,17 +244,15 @@ class App extends React.Component {
               tt: new Array(15).fill(0)
             };
             let st = stlist[data.code];
-
             // percentThreshold
-            if (data[3] > 0 && Math.abs(percent - st.percentThreshold) > 0.5) {
+            if (data.price > 0 && Math.abs(percent - st.percentThreshold) > 0.5) {
               console.log(st.percentThreshold);
               st.percentThreshold =
                 (percent / Math.abs(percent)) *
                 Math.floor(Math.abs(percent) / 0.5) *
                 0.5;
               msgs.push(
-                `${data[0]}:\n${data[3]} ${percent}%  ${
-                  percent - st.percentThreshold > 0 ? "↑" : "↓"
+                `${data.name}:\n${data.price} ${percent}%(${toFixed(data.price-data.closed,2)})  ${percent - st.percentThreshold > 0 ? "↑" : "↓"
                 }`
               );
             }
@@ -262,7 +260,7 @@ class App extends React.Component {
             let tt = st.tt;
             let prevTotal = tt.reduce((a, b) => a + b, 0);
             let last = tt.shift();
-            tt.push(data[8]);
+            tt.push(data.volTotal);
             let curTotal = tt.reduce((a, b) => a + b, 0) - last * tt.length;
             prevTotal = -last * tt.length;
             if (last > 0 && curTotal / prevTotal > 3) {
