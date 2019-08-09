@@ -48,7 +48,6 @@ let thead = (
   </tr>
 );
 function covert(data, code) {
-  console.log(data);
   if (data[0] === "HSI") {
     return {
       name: data[0],
@@ -204,7 +203,6 @@ class App extends React.Component {
     return true;
   }
   refresh() {
-    console.log(new Date());
     let titles = [];
 
     setTimeout(() => {
@@ -258,18 +256,22 @@ class App extends React.Component {
             }
 
             let tt = st.tt;
-            let prevTotal = tt.reduce((a, b) => a + b, 0);
-            let last = tt.shift();
-            tt.push(data.volTotal);
-            let curTotal = tt.reduce((a, b) => a + b, 0) - last * tt.length;
-            prevTotal = -last * tt.length;
-            if (last > 0 && curTotal / prevTotal > 3) {
-              msgs.push(
-                `${data[0]}:\nVol ${Math.floor(curTotal / 100)}/${Math.floor(
-                  prevTotal / 100
-                )} > ${Math.floor(curTotal / prevTotal)}`
-              );
+            let d = new Date();
+            if(!tt.time){
+              tt.time = d.getTime()
+              tt.prevTotal = data.volTotal;
             }
+            else if((d.getTime()-tt.time)>15*1000){
+              tt.time = d.getTime()
+              let diff = data.volTotal-tt.prevTotal;
+              let scanSize  = toFixed((diff)/tt.prevTotal,0);
+              if(scanSize>3){
+                msgs.push(
+                  `${data[0]}:\nVol ${scanSize}* ${diff}`
+                );
+              }
+            }
+
             msgs.map(text => {
               console.log(text);
               notifyMe(data.time, text);
