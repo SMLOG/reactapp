@@ -7,6 +7,8 @@ import { covert } from "./covert";
 import { getUrlVars } from "./thead";
 import { removeStock } from "../actions";
 import SelectTest from "./Select2";
+
+
 const mapStateToProps = state => ({
   stocks: state.stocks
 });
@@ -35,6 +37,36 @@ class StockList extends React.Component {
   constructor(props) {
     super(props);
     this.state = { items: [], timeStr: "" };
+  }
+  componentWillMount(){
+const electron = window.electron;
+
+let win = electron.remote.getCurrentWindow();
+let biasX = 0;
+let biasY = 0;
+document.addEventListener('mousedown', function (e) {
+  alert(e)
+    switch (e.button) {
+        case 0:
+            biasX = e.x;
+            biasY = e.y;
+            document.addEventListener('mousemove', moveEvent);
+            break;
+        case 2:
+          electron.ipcRenderer.send('createSuspensionMenu');
+            break;
+    }
+});
+document.addEventListener('mouseup', function () {
+    biasX = 0;
+    biasY = 0;
+    document.removeEventListener('mousemove', moveEvent)
+});
+
+function moveEvent(e) {
+    win.setPosition(e.screenX - biasX, e.screenY - biasY)
+}
+
   }
   isTradeTime() {
     let d = new Date();
