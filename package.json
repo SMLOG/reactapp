@@ -5,7 +5,7 @@
   "main": "main.js",
   "dependencies": {
     "electron-reload": "^1.5.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "react": "^16.8.6",
     "react-autosuggest": "^9.4.3",
     "react-dom": "^16.8.6",
